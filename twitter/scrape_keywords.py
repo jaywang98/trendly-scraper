@@ -3,10 +3,9 @@ from Scweet.scweet import scrape
 from Scweet.utils import init_driver
 from datetime import datetime, timedelta
 
-keywords = ['Israel-Palestine Conflict']
 
-# time_intervals = [["2023-12-25", "2023-12-26"], ["2023-11-14", "2023-11-15"], ["2023-11-24", "2023-11-25"], ["2024-01-07", "2024-01-08"]]
-time_intervals = [["2024-01-27", "2024-01-28"]]
+
+time_intervals = [["2024-02-21", "2024-02-22"]]
 for time_interval in time_intervals:
     start_date = time_interval[0]
     end_date = time_interval[1]
@@ -17,17 +16,15 @@ for time_interval in time_intervals:
 
     current_date = format_start_date
     while current_date < format_end_date:
-        driver = init_driver(headless=False, show_images=False, proxy=None)
+        driver = init_driver(headless=True, show_images=False, proxy=None)
         next_date = current_date + timedelta(days=interval)
         formatted_since_date = current_date.strftime("%Y-%m-%d")
         formatted_until_date = next_date.strftime("%Y-%m-%d")
         data = scrape(
-            words=keywords,
             since=formatted_since_date,
             until=formatted_until_date,
-            from_account=None,
+            from_account='AirdropAlertAAD',
             interval=1,
-            headless=False,
             display_type="Top",
             save_images=False,
             proxy=None,

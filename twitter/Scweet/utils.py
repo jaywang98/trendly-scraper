@@ -116,11 +116,12 @@ def get_data(card, save_images=False, save_dir=None):
     try:
         element = card.find_element(by=By.XPATH, value='.//a[contains(@href, "/status/")]')
         tweet_url = element.get_attribute('href')
+        tid=tweet_url.split('/')[-1]
     except:
         return
 
     tweet = (
-        username, handle, postdate, text, embedded, emojis, reply_cnt, retweet_cnt, like_cnt, image_links, if_video, tweet_url)
+        username, handle, postdate, text, embedded, emojis, reply_cnt, retweet_cnt, like_cnt, image_links, if_video, tweet_url, tid)
     return tweet
 
 
@@ -295,7 +296,7 @@ def keep_scroling(driver, data, writer, tweet_ids, scrolling, tweet_parsed, limi
             tweet = get_data(card, save_images, save_images_dir)
             if tweet:
                 # check if the tweet is unique
-                tweet_id = ''.join(tweet[:-3])
+                tweet_id = ''.join(tweet[:-4])
                 if tweet_id not in tweet_ids:
                     tweet_ids.add(tweet_id)
                     data.append(tweet)
