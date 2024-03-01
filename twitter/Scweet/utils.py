@@ -232,9 +232,12 @@ def log_search_page(driver, since, until_local, lang, display_type, words, to_ac
     return path
 
 
-def get_last_date_from_csv(path):
-    df = pd.read_csv(path)
-    return datetime.datetime.strftime(max(pd.to_datetime(df["Timestamp"])), '%Y-%m-%dT%H:%M:%S.000Z')
+def get_last_date_from_data(cursor, from_account):
+    query = "SELECT MAX(Timestamp) FROM tweet_for_account WHERE Username = %s"
+    cursor.execute(query, (from_account,))
+    last_date = cursor.fetchone()[0]
+    last_date = datetime.datetime.strptime(last_date, "%Y-%m-%d %H:%M:%S")
+    return last_date
 
 
 def log_in(driver, env, timeout=20, wait=4):
@@ -273,7 +276,7 @@ def log_in(driver, env, timeout=20, wait=4):
     sleep(random.uniform(wait, wait + 1))
 
 
-def keep_scroling(driver, data, writer, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position,
+def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position, cursor,
                   save_images=False, save_videos=False):
     """ scrolling function for tweets crawling"""
 
@@ -302,7 +305,9 @@ def keep_scroling(driver, data, writer, tweet_ids, scrolling, tweet_parsed, limi
                     data.append(tweet)
                     last_date = str(tweet[2])
                     print("Tweet made at: " + str(last_date) + " is found.")
-                    writer.writerow(tweet)
+                    sql = "INSERT INTO tweet_for_account (Tweet_id, Username, Timestamp, Embedded_text, Tweet_url) VALUES (%s, %s, %s, %s, %s)"
+                    val = (tweet[-1], tweet[1], datetime.datetime.strptime(tweet[2], "%Y-%m-%dT%H:%M:%S.%fZ"), tweet[4], tweet[-2])
+                    cursor.execute(sql, val)
                     tweet_parsed += 1
                     if tweet_parsed >= limit:
                         break
@@ -325,7 +330,7 @@ def keep_scroling(driver, data, writer, tweet_ids, scrolling, tweet_parsed, limi
             else:
                 last_position = curr_position
                 break
-    return driver, data, writer, tweet_ids, scrolling, tweet_parsed, scroll, last_position
+    return driver, data, tweet_ids, scrolling, tweet_parsed, scroll, last_position
 
 
 def get_users_follow(users, headless, env, follow=None, verbose=1, wait=2, limit=float('inf')):
