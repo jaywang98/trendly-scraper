@@ -232,12 +232,27 @@ def log_search_page(driver, since, until_local, lang, display_type, words, to_ac
     return path
 
 
-def get_last_date_from_data(cursor, from_account):
+def get_last_date_from_data(connection, from_account):
+    cursor = connection.cursor()
     query = "SELECT MAX(Timestamp) FROM tweet_for_account WHERE Username = %s"
     cursor.execute(query, (from_account,))
     last_date = cursor.fetchone()[0]
+    cursor.close()
+    if last_date is None:
+        return None
     last_date = datetime.datetime.strptime(last_date, "%Y-%m-%d %H:%M:%S")
     return last_date
+
+def check_tweet(connection, tweet_id):
+    cursor = connection.cursor()
+    query = "SELECT COUNT(*) FROM tweet_for_account WHERE tweet_id = '" + tweet_id + "'"
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    cursor.close()
+    if result > 0:
+        return False
+    else:
+        return True
 
 
 def log_in(driver, env, timeout=20, wait=4):
@@ -276,10 +291,10 @@ def log_in(driver, env, timeout=20, wait=4):
     sleep(random.uniform(wait, wait + 1))
 
 
-def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position, cursor,
+def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position, connection, resume,
                   save_images=False, save_videos=False):
     """ scrolling function for tweets crawling"""
-
+    cursor = connection.cursor()
     save_images_dir = "/images"
     save_videos_dir = "/videos"
 
@@ -292,7 +307,7 @@ def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scrol
             os.mkdir(save_videos_dir)
 
     while scrolling and tweet_parsed < limit:
-        sleep(random.uniform(3, 10))
+        sleep(random.uniform(10, 20))
         # get the card of tweets
         page_cards = driver.find_elements(by=By.XPATH, value='//article[@data-testid="tweet"]')  # changed div by article
         for card in page_cards:
@@ -305,9 +320,14 @@ def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scrol
                     data.append(tweet)
                     last_date = str(tweet[2])
                     print("Tweet made at: " + str(last_date) + " is found.")
-                    sql = "INSERT INTO tweet_for_account (Tweet_id, Username, Timestamp, Embedded_text, Tweet_url) VALUES (%s, %s, %s, %s, %s)"
-                    val = (tweet[-1], tweet[1], datetime.datetime.strptime(tweet[2], "%Y-%m-%dT%H:%M:%S.%fZ"), tweet[4], tweet[-2])
-                    cursor.execute(sql, val)
+                    is_insert = True
+                    if resume:
+                        is_insert = check_tweet(connection, tweet[-1])
+                    if is_insert:
+                        sql = "INSERT INTO tweet_for_account (username, timestamp, embedded_text, tweet_url, tweet_id) VALUES (%s, %s, %s, %s, %s)"
+                        val = (tweet[1], datetime.datetime.strptime(tweet[2], "%Y-%m-%dT%H:%M:%S.%fZ"), tweet[4], tweet[-2], tweet[-1])
+                        cursor.execute(sql, val)
+                        print(tweet[1], 'successful')
                     tweet_parsed += 1
                     if tweet_parsed >= limit:
                         break
@@ -330,6 +350,8 @@ def keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scrol
             else:
                 last_position = curr_position
                 break
+    connection.commit()
+    cursor.close()
     return driver, data, tweet_ids, scrolling, tweet_parsed, scroll, last_position
 
 

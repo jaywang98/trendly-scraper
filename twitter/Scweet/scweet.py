@@ -10,7 +10,7 @@ import mysql.connector
 
 
 def scrape(since, until=None, words=None, to_account=None, from_account=None, mention_account=None, interval=5,
-           lang=None, cursor=None,
+           lang=None, connection=None,
            headless=True, limit=float("inf"), display_type="Top", resume=False, proxy=None, hashtag=None,
            show_images=False, save_images=False, filter_replies=False, proximity=False,
            geocode=None, minreplies=None, minlikes=None, minretweets=None, driver=None, env=None):
@@ -45,8 +45,8 @@ def scrape(since, until=None, words=None, to_account=None, from_account=None, me
     # driver = init_driver(headless, proxy, show_images)
     log_in(driver, env=env)
     # resume scraping from previous work
-    if resume:
-        since = str(get_last_date_from_data(cursor, from_account).strftime("%Y-%m-%dT%H:%M:%S.000Z"))[:10]
+    # if resume:
+    #     since = str(get_last_date_from_data(connection, from_account).strftime("%Y-%m-%dT%H:%M:%S.000Z"))[:10]
 
     # ------------------------- start scraping : keep searching until until
     # open the file
@@ -80,10 +80,10 @@ def scrape(since, until=None, words=None, to_account=None, from_account=None, me
         # number of tweets parsed
         tweet_parsed = 0
         # sleep
-        sleep(random.uniform(3, 5))
+        sleep(random.uniform(10, 15))
         # start scrolling and get tweets
         driver, data, tweet_ids, scrolling, tweet_parsed, scroll, last_position = \
-            keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position, cursor)
+            keep_scroling(driver, data, tweet_ids, scrolling, tweet_parsed, limit, scroll, last_position, connection, resume)
 
         # keep updating <start date> and <end date> for every search
         if type(since) == str:
